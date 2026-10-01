@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "MAIA - Longevity Credibility Index. Automated evidence-aggregation engine (public data -> dual-axis score -> history).",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "capture": "node scripts/capture.js",
     "capture:dry": "DRY_RUN=1 node scripts/capture.js",
