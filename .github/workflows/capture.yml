@@ -1,0 +1,41 @@
+name: MAIA daily capture
+
+# Daily snapshot of the Longevity Credibility Index.
+# 06:00 UTC = ~01:00-02:00 America/New_York -> inside NCBI's off-peak window.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Only process the first N ingredients (smoke test). Leave blank for all.'
+        required: false
+        default: ''
+
+concurrency:
+  group: maia-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Run capture
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NCBI_EMAIL: ${{ secrets.NCBI_EMAIL }}
+          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+          OPENFDA_API_KEY: ${{ secrets.OPENFDA_API_KEY }}
+          LIMIT: ${{ github.event.inputs.limit }}
+        run: node scripts/capture.js

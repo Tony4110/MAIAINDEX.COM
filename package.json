@@ -1,0 +1,16 @@
+{
+  "name": "maia-index",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MAIA - Longevity Credibility Index. Automated evidence-aggregation engine (public data -> dual-axis score -> history).",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "capture": "node scripts/capture.js",
+    "capture:dry": "DRY_RUN=1 node scripts/capture.js",
+    "score:test": "node scripts/score.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
