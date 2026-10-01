@@ -149,16 +149,26 @@ export async function openFda(name) {
   }
 }
 
-// Gather every raw signal for one ingredient (canonical name used for queries).
+// Gather every raw signal for one ingredient. Never throws: a failing source
+// is recorded in source_errors and the others still contribute.
 export async function gatherRaw(queryName) {
-  const pubmed = await pubmedCounts(queryName);
-  await sleep(150);
-  const ct = await clinicalTrials(queryName);
-  await sleep(150);
-  const epmc = await europePmc(queryName);
-  await sleep(150);
-  const oa = await openAlex(queryName);
-  await sleep(150);
-  const fda = await openFda(queryName);
-  return { ...pubmed, ...ct, ...epmc, ...oa, ...fda, pulled_at: new Date().toISOString() };
+  const out = { pulled_at: new Date().toISOString() };
+  const steps = [
+    ['pubmed', () => pubmedCounts(queryName)],
+    ['clinicaltrials', () => clinicalTrials(queryName)],
+    ['europepmc', () => europePmc(queryName)],
+    ['openalex', () => openAlex(queryName)],
+    ['openfda', () => openFda(queryName)],
+  ];
+  const errs = [];
+  for (const [name, fn] of steps) {
+    try {
+      Object.assign(out, await fn());
+    } catch (e) {
+      errs.push(`${name}: ${e?.message || e}`);
+    }
+    await sleep(150);
+  }
+  if (errs.length) out.source_errors = errs;
+  return out;
 }

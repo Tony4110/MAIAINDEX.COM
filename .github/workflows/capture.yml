@@ -16,6 +16,9 @@ concurrency:
   group: maia-capture
   cancel-in-progress: false
 
+permissions:
+  contents: write   # allows the failure reporter to post a commit comment
+
 jobs:
   capture:
     runs-on: ubuntu-latest
@@ -38,4 +41,35 @@ jobs:
           NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
           OPENFDA_API_KEY: ${{ secrets.OPENFDA_API_KEY }}
           LIMIT: ${{ github.event.inputs.limit }}
-        run: node scripts/capture.js
+        run: |
+          set -o pipefail
+          node scripts/capture.js 2>&1 | tee capture.log
+
+      - name: Report failure as commit comment
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request
+          try:
+              tail = open('capture.log','r',errors='replace').read()[-5000:]
+          except Exception as e:
+              tail = f'(no capture.log: {e})'
+          body = "**MAIA capture failed** — last output:\n\n```\n" + tail + "\n```"
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['REPO']}/commits/{os.environ['SHA']}/comments",
+              data=json.dumps({"body": body}).encode(),
+              headers={
+                  "Authorization": "Bearer " + os.environ['GH_TOKEN'],
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+              })
+          try:
+              r = urllib.request.urlopen(req)
+              print("comment posted:", r.status)
+          except Exception as e:
+              print("failed to post comment:", e)
+          PY
